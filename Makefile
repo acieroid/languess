@@ -1,10 +1,12 @@
-.PHONY: build unique-build base-unique-build data all-data unique-data base-unique-data real-data sample-data test serve clean
+.PHONY: build full-site unique-build base-unique-build data all-data full-data unique-data base-unique-data real-data sample-data test serve clean
 
 build: data
 	dune build src/main.bc.js
 	mkdir -p public/assets
 	cp static/style.css public/assets/style.css
 	cp -f _build/default/src/main.bc.js public/assets/app.js
+
+full-site: build full-data
 
 unique-build: unique-data
 	dune build src/main.bc.js
@@ -20,7 +22,7 @@ base-unique-build: base-unique-data
 
 data:
 	@if test -d /usr/share/hunspell && test -r /usr/share/dict/faroese && test -r /usr/share/dict/irish && test -r /usr/share/dict/manx; then \
-		$(MAKE) all-data; \
+		$(MAKE) base-unique-data; \
 	elif test -r /usr/share/dict/american-english && test -r /usr/share/dict/ngerman && test -r /usr/share/dict/french && test -r /usr/share/dict/spanish && test -r /usr/share/dict/italian && test -r /usr/share/dict/portuguese; then \
 		$(MAKE) real-data; \
 	else \
@@ -30,6 +32,11 @@ data:
 all-data:
 	mkdir -p public/data
 	dune exec scripts/preprocess.exe -- --limit=5000 public/data --hunspell=/usr/share/hunspell \
+		Faroese:/usr/share/dict/faroese Irish:/usr/share/dict/irish Manx:/usr/share/dict/manx
+
+full-data:
+	mkdir -p public/data-full
+	dune exec scripts/preprocess.exe -- --base-only --unique public/data-full --hunspell=/usr/share/hunspell \
 		Faroese:/usr/share/dict/faroese Irish:/usr/share/dict/irish Manx:/usr/share/dict/manx
 
 unique-data:

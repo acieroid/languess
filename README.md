@@ -27,7 +27,7 @@ Open <http://localhost:8000>. `make serve` is the shortcut, and `make test` runs
 
 ## Dictionaries
 
-When Hunspell dictionaries and the three supplemental Unix lists are installed, `make build` generates data for every installed Hunspell dictionary variant plus Faroese, Irish, and Manx. To keep browser startup practical, each source is deterministically sampled to at most 5,000 normalized real words. The repository also includes a deliberately small fallback dataset in `data/sample/`, so builds remain immediately playable on machines without dictionaries. Its `shared` entry is intentionally present in every language to demonstrate multiple valid answers.
+When Hunspell dictionaries and the three supplemental Unix lists are installed, `make build` generates the base-first unique dataset: one canonical dictionary per language, then only words that occur in exactly one selected dictionary. This retains the most useful guessing words while avoiding regional-edition duplication. Each source is deterministically sampled to at most 5,000 normalized real words. The repository also includes a deliberately small fallback dataset in `data/sample/`, so builds remain immediately playable on machines without dictionaries. Its `shared` entry is intentionally present in every language to demonstrate multiple valid answers.
 
 On Debian/Ubuntu, install the six source lists with:
 
@@ -50,7 +50,11 @@ On Linux these lists are commonly distributed as `wamerican`, `wspanish`, `wfren
 
 Run `make unique-build` to create a discriminative variant: a word is retained only when it occurs in exactly one normalized source dictionary, then each remaining dictionary is capped at 5,000 representative entries. Dictionaries without any unique words are omitted from that manifest. This build is slower and uses substantial RAM because it compares the complete source corpus. Run `make build` to restore the normal shared-word dataset.
 
-Run `make base-unique-build` for the recommended discriminative variant. It first keeps one canonical dictionary per base language and discards regional/edition variants, then applies the same global unique-word rule. This avoids a language such as French being removed merely because its French regional variants overlap.
+`make build` uses the recommended base-first unique variant. It first keeps one canonical dictionary per base language and discards regional/edition variants, then applies the same global unique-word rule. This avoids a language such as French being removed merely because its French regional variants overlap. `make base-unique-build` explicitly selects the same mode.
+
+### Full dataset
+
+The unchecked **Full dataset** control switches the game to `public/data-full/`: the same base-first unique corpus without the 5,000-word-per-language cap. Generate a deployable site with both datasets using `make full-site`. The current full corpus contains about 7.9 million playable words (minimum length 5) and 146 MB of JSON before HTTP compression, so it is intended for fast connections and has a noticeably longer loading/indexing phase.
 
 ## Architecture
 

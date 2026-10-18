@@ -31,6 +31,7 @@ let word = element "word"
 let difficulty : Dom_html.selectElement Js.t = Js.Unsafe.coerce (element "difficulty")
 let minimum : Dom_html.inputElement Js.t = Js.Unsafe.coerce (element "minimum-length")
 let guess : Dom_html.inputElement Js.t = Js.Unsafe.coerce (element "guess-input")
+let full_dataset : Dom_html.inputElement Js.t = Js.Unsafe.coerce (element "full-dataset")
 
 let continents = [ "africa", "Africa"; "asia", "Asia"; "europe", "Europe"; "south-america", "South America" ]
 
@@ -197,10 +198,11 @@ let start_game dictionaries =
   end
 
 let load_game () =
-  set_text status "Loading dictionaries…";
+  let data_root = if Js.to_bool full_dataset##.checked then "data-full" else "data" in
+  set_text status (if data_root = "data-full" then "Loading full dictionaries…" else "Loading dictionaries…");
   status##.className := Js.string "status";
   let fail message = status##.className := Js.string "status error"; set_text status ("Could not start game: " ^ message) in
-  fetch_text "data/manifest.json"
+  fetch_text (data_root ^ "/manifest.json")
     (fun manifest_text ->
       try
         let files = parse_manifest manifest_text in
@@ -212,14 +214,15 @@ let load_game () =
           let loaded = ref [] in
           let failed = ref false in
           List.iter (fun info ->
-            match Hashtbl.find_opt dictionary_cache info.file with
+            let cache_key = data_root ^ "/" ^ info.file in
+            match Hashtbl.find_opt dictionary_cache cache_key with
             | Some words ->
                 loaded := (info.name, words) :: !loaded; decr pending;
                 if !pending = 0 then start_game (List.rev !loaded)
-            | None -> fetch_text ("data/" ^ info.file)
+            | None -> fetch_text cache_key
                 (fun text -> try
                   let words = parse_words text in
-                  Hashtbl.replace dictionary_cache info.file words;
+                  Hashtbl.replace dictionary_cache cache_key words;
                   loaded := (info.name, words) :: !loaded;
                   decr pending;
                   if !pending = 0 && not !failed then start_game (List.rev !loaded)

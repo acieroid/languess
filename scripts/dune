@@ -1,3 +1,7 @@
 (executable
  (name preprocess)
  (libraries unix))
+
+(executable
+ (name preprocess_sentences)
+ (libraries unix))

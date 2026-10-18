@@ -13,6 +13,12 @@ type game = {
 
 let document = Dom_html.document
 let element id = Dom_html.getElementById id
+let sentence_mode =
+  match Js.Opt.to_option (document##.body##getAttribute (Js.string "data-game")) with
+  | Some value -> Js.to_string value = "sentences"
+  | None -> false
+let item_name = if sentence_mode then "sentence" else "word"
+let item_plural = if sentence_mode then "sentences" else "words"
 let set_text node value = node##.textContent := Js.some (Js.string value)
 let set_html node value = node##.innerHTML := Js.string value
 let show node = node##.style##.display := Js.string ""
@@ -37,7 +43,9 @@ let minimum : Dom_html.inputElement Js.t = Js.Unsafe.coerce (element "minimum-le
 let guess : Dom_html.inputElement Js.t = Js.Unsafe.coerce (element "guess-input")
 let full_dataset : Dom_html.inputElement Js.t = Js.Unsafe.coerce (element "full-dataset")
 
-let continents = [ "africa", "Africa"; "asia", "Asia"; "europe", "Europe"; "south-america", "South America" ]
+let continents =
+  let common = [ "africa", "Africa"; "asia", "Asia"; "europe", "Europe"; "south-america", "South America" ] in
+  if sentence_mode then common @ [ "other", "Other regions" ] else common
 
 let continent_of_language name =
   let base =
@@ -52,6 +60,7 @@ let continent_of_language name =
       "Malayalam"; "Mongolian"; "Nepali"; "Sinhala"; "Telugu"; "Thai"; "Tibetan";
       "Turkish"; "Uzbek"; "Vietnamese" ] then "Asia"
   else if base = "Guarani" then "South America"
+  else if sentence_mode then "Other regions"
   else "Europe"
 
 let selected_continents () =
@@ -103,9 +112,10 @@ let parse_manifest text =
   Array.to_list entries
   |> List.map (fun entry -> { name = js_string (property entry "name"); file = js_string (property entry "file") })
 
-let parse_words text =
+let parse_items text =
   let root = json_parse text in
-  let items = Js.to_array (Js.Unsafe.coerce (property root "words")) in
+  let field = if sentence_mode then "sentences" else "words" in
+  let items = Js.to_array (Js.Unsafe.coerce (property root field)) in
   Array.to_list items |> List.map js_string
 
 let update_score game = set_text score (Printf.sprintf "Score: %d / %d" game.correct_count game.question_count)
@@ -147,10 +157,10 @@ let submit game answer =
     if correct then begin
       game.correct_count <- game.correct_count + 1;
       feedback##.className := Js.string "feedback correct";
-      set_text feedback ("Correct. This word occurs in: " ^ String.concat ", " valid)
+      set_text feedback ("Correct. This " ^ item_name ^ " occurs in: " ^ String.concat ", " valid)
     end else begin
       feedback##.className := Js.string "feedback incorrect";
-      set_text feedback ("Not quite. This word occurs in: " ^ String.concat ", " valid)
+      set_text feedback ("Not quite. This " ^ item_name ^ " occurs in: " ^ String.concat ", " valid)
     end;
     update_score game;
     set_hidden next_button false;
@@ -173,12 +183,12 @@ let render_suggestions languages =
     option##setAttribute (Js.string "value") (Js.string name);
     Dom.appendChild list option) languages
 
-let show_word game =
+let show_item game =
   match game.remaining with
   | [] ->
       game.current <- None;
       set_text word "Game complete";
-      set_text feedback "You have used every available word. Restart to play again.";
+      set_text feedback ("You have used every available " ^ item_name ^ ". Restart to play again.");
       set_html answer_box "";
       hide hard_box;
       hide next_button
@@ -206,31 +216,43 @@ let show_word game =
         |> List.iter (fun language -> add_button language (fun () -> submit game language))
       end
 
+let sentence_word_count text =
+  String.split_on_char ' ' text |> List.filter (fun part -> String.trim part <> "") |> List.length
+
 let start_game dictionaries =
   let min_length = try max 1 (int_of_string (Js.to_string minimum##.value)) with Failure _ -> 5 in
-  let index = Game.build_index ~minimum_length:min_length dictionaries in
+  let dictionaries =
+    if sentence_mode then
+      List.map (fun (language, items) ->
+        language, List.filter (fun item -> sentence_word_count item >= min_length) items) dictionaries
+    else dictionaries
+  in
+  let index = Game.build_index ~minimum_length:(if sentence_mode then 1 else min_length) dictionaries in
   let available = Game.words index in
   if available = [] then begin
     set_hidden loading true;
     status##.className := Js.string "status error";
-    set_text status "No words meet that minimum length. Choose a smaller value."
+    set_text status ("No " ^ item_plural ^ " meet that minimum length. Choose a smaller value.")
   end else begin
     let languages = List.map fst dictionaries in
     let game = { languages; index; remaining = available; current = None; answered = false; correct_count = 0; question_count = 0 } in
     current_game := Some game;
     set_hidden loading true;
     status##.className := Js.string "status";
-    set_text status (Printf.sprintf "%d languages · %d words ready." (List.length languages) (List.length available));
+    set_text status (Printf.sprintf "%d languages · %d %s ready." (List.length languages) (List.length available) item_plural);
     render_suggestions languages;
     set_hidden round false;
     show round;
     update_score game;
-    show_word game
+    show_item game
   end
 
 let load_game () =
-  let data_root = if Js.to_bool full_dataset##.checked then "data-full" else "data" in
-  let loading_name = if data_root = "data-full" then "Loading full dictionaries" else "Loading dictionaries" in
+  let data_root = if sentence_mode then "sentences-1k" else if Js.to_bool full_dataset##.checked then "data-full" else "data" in
+  let loading_name =
+    if sentence_mode then "Loading sentence collections"
+    else if data_root = "data-full" then "Loading full dictionaries" else "Loading dictionaries"
+  in
   set_text status (loading_name ^ "…");
   status##.className := Js.string "status";
   set_text loading_label loading_name;
@@ -261,7 +283,7 @@ let load_game () =
               incr completed;
               update_loading !completed total;
               if !completed = total then begin
-                set_text loading_label "Indexing words";
+                set_text loading_label ("Indexing " ^ item_plural);
                 set_text status "Preparing the game…";
                 defer (fun () -> start_game (List.rev !loaded))
               end
@@ -274,9 +296,9 @@ let load_game () =
                 loaded_dictionary info words
             | None -> fetch_text cache_key
                 (fun text -> try
-                  let words = parse_words text in
-                  Hashtbl.replace dictionary_cache cache_key words;
-                  loaded_dictionary info words
+                  let items = parse_items text in
+                  Hashtbl.replace dictionary_cache cache_key items;
+                  loaded_dictionary info items
                 with _ -> if not !failed then (failed := true; fail ("invalid data in " ^ info.file)))
                 (fun message -> if not !failed then (failed := true; fail message))) files
         end
@@ -287,7 +309,7 @@ let () =
   Dom_html.addEventListener (element "start") Dom_html.Event.click
     (Dom_html.handler (fun _ -> load_game (); Js._false)) Js._false |> ignore;
   Dom_html.addEventListener (element "next") Dom_html.Event.click
-    (Dom_html.handler (fun _ -> (match !current_game with Some game -> show_word game | None -> ()); Js._false)) Js._false |> ignore;
+    (Dom_html.handler (fun _ -> (match !current_game with Some game -> show_item game | None -> ()); Js._false)) Js._false |> ignore;
   Dom_html.addEventListener (element "submit-guess") Dom_html.Event.click
     (Dom_html.handler (fun _ -> (match !current_game with Some game -> submit game (Js.to_string guess##.value) | None -> ()); Js._false)) Js._false |> ignore;
   Dom_html.addEventListener guess Dom_html.Event.keydown

@@ -25,6 +25,24 @@ python3 -m http.server 8000 --directory public
 
 Open <http://localhost:8000>. `make serve` is the shortcut, and `make test` runs the pure game-logic tests. Deploy the contents of `public/` to any static host. It must be served over HTTP because dictionaries are fetched separately.
 
+## Sentence Guess
+
+Open `/sentence.html` (or use the link from Word Guess) to play the sentence variant. It uses the same Easy, Medium, and Hard answer modes, continent filters, scorekeeping, gzip loading, and progress display. The repository ships a deterministic random sample of up to 1,000 filtered sentences per language from Tatoeba, rather than its very large complete corpus. Sentence Guess uses the 150 languages that currently have at least 1,000 source sentences; the smaller 61-language sample remains in `public/sentences/` for development.
+
+The source files are Tatoeba's weekly per-language TSV exports. Each row contains a sentence id, ISO 639-3 code, and text. `scripts/preprocess_sentences.ml` downloads those exports, removes very short/long and duplicate entries, reservoir-samples the remaining sentences with a fixed seed, and writes `public/sentences/*.json.gz` with a manifest. Rebuild it with:
+
+```sh
+make sentence-data
+```
+
+To regenerate the expanded dataset used by Sentence Guess, run:
+
+```sh
+make sentence-1k-data
+```
+
+This needs `curl` and `bzip2`, in addition to the OCaml prerequisites. The Tatoeba sentence data used here is **CC BY 2.0 FR**; the sentence page and this README attribute Tatoeba. Sentences are community-contributed and may contain unexpected content. See [Tatoeba's download and licensing information](https://tatoeba.org/en/downloads).
+
 ## Dictionaries
 
 When Hunspell dictionaries and the three supplemental Unix lists are installed, `make build` generates the base-first unique dataset: one canonical dictionary per language, then only words that occur in exactly one selected dictionary. This retains the most useful guessing words while avoiding regional-edition duplication. Each source is deterministically sampled to at most 5,000 normalized real words. The repository also includes a deliberately small fallback dataset in `data/sample/`, so builds remain immediately playable on machines without dictionaries. Its `shared` entry is intentionally present in every language to demonstrate multiple valid answers.
@@ -60,6 +78,7 @@ The unchecked **Full dataset** control switches the game to `public/data-full/`:
 
 - `src/game.ml` provides pure UTF-8 length filtering, word-to-language indexing, answer checks, and shuffled choices; `src/game_test.ml` tests these rules.
 - `src/main.ml` fetches the manifest and JSON dictionaries asynchronously, caches them in memory, manages game state, and renders the DOM.
+- `public/sentence.html` reuses that browser application with a sentence-data manifest; Tatoeba data is fetched only from the static host, never from Tatoeba at play time.
 - Dictionaries are never bundled into the generated JavaScript. Every selected word is removed from the current pool, and every language containing it is accepted.
 
 Easy and medium generate 3 and 6 distinct shuffled choices (or fewer if a custom manifest has too few languages). Hard mode uses a keyboard-accessible native `datalist` autocomplete. The prototype loads all manifest languages at game start asynchronously: simple and responsive for the initial set, while leaving the data format open to future lazy loading.

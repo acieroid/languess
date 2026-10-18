@@ -1,4 +1,4 @@
-.PHONY: build full-site unique-build base-unique-build data all-data full-data unique-data base-unique-data real-data sample-data test serve clean
+.PHONY: build full-site sentence-build sentence-data sentence-1k-data unique-build base-unique-build data all-data full-data unique-data base-unique-data real-data sample-data test serve clean
 
 build: data
 	dune build src/main.bc.js
@@ -7,6 +7,20 @@ build: data
 	cp -f _build/default/src/main.bc.js public/assets/app.js
 
 full-site: build full-data
+
+# Downloads a deterministic, compact sample of Tatoeba's weekly sentence exports.
+# It is separate from `build` so ordinary word-game builds never need the network.
+sentence-data:
+	mkdir -p public/sentences
+	dune exec scripts/preprocess_sentences.exe -- --output public/sentences --limit=1000
+
+sentence-build: build sentence-data
+
+# Tatoeba languages with at least 1,000 source sentences. Requires iso-codes
+# for human-readable ISO 639-3 names (sudo apt-get install iso-codes).
+sentence-1k-data:
+	mkdir -p public/sentences-1k
+	dune exec scripts/preprocess_sentences.exe -- --output public/sentences-1k --limit=1000 --codes data/tatoeba-1k-codes.txt
 
 unique-build: unique-data
 	dune build src/main.bc.js

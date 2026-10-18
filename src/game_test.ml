@@ -11,6 +11,13 @@ let () =
   expect (Game.languages_for index "shared" = [ "English"; "German" ])
     "shared words must retain every language";
   expect (Game.languages_for index "tiny" = []) "minimum word length must filter";
+  let sentence_index =
+    Game.build_index ~minimum_length:1
+      [ ("English", [ "This is shared text." ]);
+        ("French", [ "This is shared text." ]) ]
+  in
+  expect (Game.languages_for sentence_index "this is shared text." = [ "English"; "French" ])
+    "identical sentences must retain every language";
   expect (Game.answer_is_correct ~correct:[ "English"; "German" ] "german")
     "answers should be case insensitive";
   Random.init 7;

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sentence Guess</title>
+    <link rel="stylesheet" href="assets/style.css">
+  </head>
+  <body data-game="sentences">
+    <main class="game-shell">
+      <header>
+        <h1>Sentence Guess</h1>
+        <p class="subtitle">Which language does this sentence belong to?</p>
+        <p class="game-switch"><a href="index.html">← Try Word Guess</a></p>
+      </header>
+      <section class="controls" aria-label="Game settings">
+        <label>Difficulty<select id="difficulty"><option value="easy">Easy · 3 choices</option><option value="medium">Medium · 6 choices</option><option value="hard">Hard · type the language</option></select></label>
+        <label>Minimum sentence words<input id="minimum-length" type="number" min="1" value="3" inputmode="numeric"></label>
+        <fieldset class="continent-filters"><legend>Language regions</legend><div><label><input id="continent-africa" type="checkbox" checked> Africa</label><label><input id="continent-asia" type="checkbox" checked> Asia</label><label><input id="continent-europe" type="checkbox" checked> Europe</label><label><input id="continent-south-america" type="checkbox" checked> South America</label><label><input id="continent-other" type="checkbox" checked> Other regions</label></div></fieldset>
+        <input id="full-dataset" type="checkbox" hidden>
+        <button id="start" type="button">Start game</button>
+      </section>
+      <p id="status" class="status" role="status">Choose settings and start a game.</p>
+      <section id="loading" class="loading" aria-live="polite" hidden><div class="loading-copy"><span id="loading-label">Loading sentence collections</span><span id="loading-count">0 / 0</span></div><progress id="loading-progress" max="1" value="0">0%</progress></section>
+      <section id="round" class="round" hidden>
+        <div class="score" id="score">Score: 0 / 0</div><p id="word" class="word sentence" aria-live="polite"></p><div id="answers" class="answers"></div>
+        <div id="hard-answer" class="hard-answer" hidden><label for="guess-input">Language</label><input id="guess-input" list="language-suggestions" autocomplete="off" placeholder="Start typing a language"><datalist id="language-suggestions"></datalist><button id="submit-guess" type="button">Submit guess</button></div>
+        <p id="feedback" class="feedback" role="status"></p><button id="next" class="next" type="button" hidden>Next sentence</button>
+      </section>
+      <footer class="attribution">Sentence data: <a href="https://tatoeba.org/en/downloads">Tatoeba</a>, licensed under CC BY 2.0 FR. Sentences are community-contributed.</footer>
+    </main>
+    <script src="assets/app.js"></script>
+  </body>
+</html>

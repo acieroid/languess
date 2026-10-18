@@ -166,7 +166,7 @@ let start_game dictionaries =
     let game = { languages; index; remaining = available; current = None; answered = false; correct_count = 0; question_count = 0 } in
     current_game := Some game;
     status##.className := Js.string "status";
-    set_text status (Printf.sprintf "%d words ready." (List.length available));
+    set_text status (Printf.sprintf "%d languages · %d words ready." (List.length languages) (List.length available));
     render_suggestions languages;
     set_hidden round false;
     show round;

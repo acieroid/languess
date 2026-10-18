@@ -53,13 +53,38 @@ let continent_of_language name =
     | Some index -> String.trim (String.sub name 0 index)
     | None -> name
   in
-  if List.mem base [ "Afrikaans"; "Swahili" ] then "Africa"
+  if List.mem base
+    [ "Afrikaans"; "Swahili"; "Congo Swahili"; "Kabyle"; "Berber"; "Tigre";
+      "Tachelhit"; "Hausa"; "Standard Moroccan Tamazight"; "Nande"; "Rundi";
+      "Tarifit"; "Lingala"; "Tigrinya"; "Central Kanuri"; "Nuer";
+      "Algerian Arabic"; "Egyptian Arabic" ] then "Africa"
   else if List.mem base
     [ "Arabic"; "Bengali"; "Central Kurdish"; "Dzongkha"; "Gujarati"; "Hebrew";
       "Hindi"; "Indonesian"; "Kazakh"; "Korean"; "Kurdish"; "Kurmanji"; "Lao";
       "Malayalam"; "Mongolian"; "Nepali"; "Sinhala"; "Telugu"; "Thai"; "Tibetan";
-      "Turkish"; "Uzbek"; "Vietnamese" ] then "Asia"
-  else if base = "Guarani" then "South America"
+      "Turkish"; "Uzbek"; "Vietnamese"; "Japanese"; "Mandarin Chinese"; "Marathi";
+      "Tagalog"; "Armenian"; "Iranian Persian"; "Yue Chinese"; "Assamese";
+      "Azerbaijani"; "Northern Kurdish"; "Uighur"; "Standard Malay"; "Turkmen";
+      "Santali"; "Coastal Kadazan"; "Wu Chinese"; "Nepali (individual language)";
+      "Kadazan Dusun"; "Rohingya"; "Urdu"; "Ottoman Turkish (1500-1928)";
+      "Iloko"; "Khmer"; "Ho"; "Khasi"; "Waray (Philippines)";
+      "Malay (individual language)"; "Literary Chinese"; "Cebuano"; "Javanese";
+      "Southern Altai"; "Buriat"; "Yakut" ] then "Asia"
+  else if List.mem base [ "Guarani"; "Guadeloupean Creole French" ] then "South America"
+  else if sentence_mode && List.mem base
+    [ "English"; "Russian"; "Italian"; "Esperanto"; "German"; "French"; "Portuguese";
+      "Spanish"; "Hungarian"; "Dutch"; "Ukrainian"; "Lithuanian"; "Finnish"; "Polish";
+      "Czech"; "Macedonian"; "Danish"; "Swedish"; "Latin"; "Serbian";
+      "Modern Greek (1453-)"; "Interlingua (International Auxiliary Language Association)";
+      "Romanian"; "Lingua Franca Nova"; "Slovak"; "Yiddish"; "Bulgarian";
+      "Occitan (post 1500)"; "Standard Latvian"; "Norwegian Bokmål"; "Low German";
+      "Ido"; "Belarusian"; "Interlingue"; "Icelandic"; "Gronings";
+      "Norwegian Nynorsk"; "Catalan"; "Galician"; "Breton"; "Croatian"; "Basque";
+      "Estonian"; "Prussian"; "Udmurt"; "Eastern Mari"; "Cornish"; "Slovenian";
+      "Northern Frisian"; "Irish"; "Albanian"; "Hunsrik"; "Ladino"; "Swabian";
+      "Ligurian"; "Welsh"; "Ancient Greek (to 1453)"; "Bosnian"; "Chuvash";
+      "Interslavic"; "Lower Sorbian"; "Upper Sorbian"; "Picard"; "Old Russian";
+      "Brithenig"; "Scottish Gaelic"; "Romany"; "Luxembourgish" ] then "Europe"
   else if sentence_mode then "Other regions"
   else "Europe"
 
@@ -270,10 +295,7 @@ let load_game () =
         let files = parse_manifest manifest_text in
         let selected = selected_continents () in
         let filtered = List.filter (fun info -> List.mem (continent_of_language info.name) selected) files in
-        (* A custom sentence manifest can contain language names whose region is
-           not yet classified.  Do not make the game unusable merely because a
-           filter has no matching metadata. *)
-        let files = if sentence_mode && filtered = [] && files <> [] then files else filtered in
+        let files = filtered in
         if files = [] then fail "the manifest has no languages"
         else begin
           let total = List.length files in

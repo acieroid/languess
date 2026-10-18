@@ -112,6 +112,76 @@ let download_and_sample ~limit source =
   | Unix.WEXITED 0 -> sentences
   | _ -> failwith ("could not download " ^ source.name)
 
+let in_codes code codes = List.mem code codes
+
+(* Coarse, deliberately single-valued facets for filtering.  They are stored
+   as tags so later refinements can add a branch or secondary script without a
+   manifest-format migration. *)
+let region_of code =
+  if in_codes code [ "kab"; "ber"; "ara"; "tig"; "shi"; "hau"; "zgh"; "swc"; "rif";
+    "afr"; "lin"; "swh"; "run"; "tir"; "knc"; "nus"; "arq"; "gcf"; "arz" ] then "africa"
+  else if in_codes code [ "jpn"; "heb"; "cmn"; "mar"; "tgl"; "hye"; "pes"; "ind"; "yue";
+    "hin"; "kor"; "ben"; "asm"; "aze"; "ckb"; "kmr"; "uig"; "zsm"; "kat"; "oss";
+    "tuk"; "tha"; "sat"; "kzj"; "kaz"; "npi"; "dtp"; "urd"; "mon"; "ilo"; "khm";
+    "hoc"; "kha"; "war"; "zlm"; "xmf"; "lzh"; "ceb"; "jav"; "ava"; "alt"; "pam";
+    "uzb"; "bua"; "sdh"; "sah" ] then "asia"
+  else if in_codes code [ "grn"; "gcf" ] then "south-america"
+  else "europe"
+
+let family_of code =
+  if in_codes code [ "eng"; "rus"; "ita"; "deu"; "fra"; "por"; "spa"; "nld"; "ukr";
+    "lit"; "pol"; "ces"; "mar"; "mkd"; "dan"; "swe"; "lat"; "srp"; "hye"; "ell";
+    "ron"; "slk"; "pes"; "yid"; "bul"; "oci"; "lvs"; "nob"; "nds"; "hin"; "ben";
+    "asm"; "bel"; "nnb"; "isl"; "gos"; "nno"; "cat"; "kmr"; "glg"; "bre"; "oss";
+    "hrv"; "afr"; "frr"; "gle"; "urd"; "sqi"; "arq"; "hrx"; "lad"; "swg"; "lij";
+    "zza"; "cym"; "grc"; "bos"; "isv"; "dsb"; "hsb"; "pcd"; "orv"; "bzt"; "gla";
+    "sdh"; "rom"; "ltz" ] then "indo-european"
+  else if in_codes code [ "ara"; "heb"; "tig"; "kab"; "ber"; "shi"; "hau"; "zgh";
+    "rif"; "tir"; "knc"; "arq"; "arz" ] then "afro-asiatic"
+  else if in_codes code [ "tur"; "tat"; "aze"; "uig"; "tuk"; "kaz"; "ota"; "chv";
+    "alt"; "uzb"; "sah" ] then "turkic"
+  else if in_codes code [ "hun"; "fin"; "est"; "udm"; "mhr" ] then "uralic"
+  else if in_codes code [ "cmn"; "yue"; "wuu"; "lzh" ] then "sino-tibetan"
+  else if in_codes code [ "ind"; "tgl"; "zsm"; "dtp"; "ilo"; "war"; "zlm"; "ceb"; "jav"; "pam" ] then "austronesian"
+  else if in_codes code [ "vie"; "khm"; "sat"; "hoc"; "kha" ] then "austroasiatic"
+  else if in_codes code [ "swc"; "run"; "lin"; "swh" ] then "niger-congo"
+  else if in_codes code [ "jpn" ] then "japonic"
+  else if in_codes code [ "kor" ] then "koreanic"
+  else if in_codes code [ "kat"; "xmf" ] then "kartvelian"
+  else if in_codes code [ "mon"; "bua" ] then "mongolic"
+  else if in_codes code [ "ava"; "dar" ] then "caucasian"
+  else if in_codes code [ "epo"; "tlh"; "tok"; "ina"; "lfn"; "jbo"; "ido"; "ile"; "avk";
+    "vol"; "isv"; "bzt"; "nov" ] then "constructed"
+  else if code = "eus" then "language-isolate"
+  else "other"
+
+let script_of code =
+  if in_codes code [ "ara"; "pes"; "ckb"; "uig"; "urd"; "ota"; "arq"; "arz"; "sdh" ] then "arabic"
+  else if in_codes code [ "rus"; "ukr"; "bel"; "bul"; "mkd"; "srp"; "tat"; "chv"; "alt"; "sah"; "mhr"; "bua"; "udm" ] then "cyrillic"
+  else if in_codes code [ "cmn"; "yue"; "wuu"; "lzh" ] then "han"
+  else if code = "jpn" then "japanese"
+  else if code = "kor" then "hangul"
+  else if in_codes code [ "heb"; "yid" ] then "hebrew"
+  else if in_codes code [ "ell"; "grc" ] then "greek"
+  else if in_codes code [ "hin"; "mar"; "npi" ] then "devanagari"
+  else if in_codes code [ "ben"; "asm" ] then "bengali-assamese"
+  else if code = "tha" then "thai"
+  else if code = "khm" then "khmer"
+  else if in_codes code [ "kat"; "xmf" ] then "georgian"
+  else if code = "hye" then "armenian"
+  else if in_codes code [ "tig"; "tir" ] then "ethiopic"
+  else "latin"
+
+let status_of code =
+  if in_codes code [ "epo"; "tlh"; "tok"; "ina"; "lfn"; "jbo"; "ido"; "ile"; "avk";
+    "vol"; "isv"; "bzt"; "nov" ] then "constructed"
+  else if in_codes code [ "lat"; "grc"; "ota"; "orv"; "prg" ] then "historical"
+  else "modern"
+
+let tags_of source =
+  [ "region:" ^ region_of source.code; "family:" ^ family_of source.code;
+    "script:" ^ script_of source.code; "status:" ^ status_of source.code ]
+
 let write_file path sentences =
   let output = open_out path in
   output_string output "{\"sentences\":[";
@@ -166,6 +236,9 @@ let () =
   output_string manifest "{\n  \"source\": \"Tatoeba sentence exports\",\n  \"license\": \"CC BY 2.0 FR\",\n  \"languages\": [\n";
   List.rev !written |> List.iteri (fun i (name, file) ->
     if i > 0 then output_string manifest ",\n";
-    Printf.fprintf manifest "    {\"name\":%s,\"file\":%s}" (json_string name) (json_string file));
+    let source = List.find (fun source -> source.name = name) sources in
+    let tags = tags_of source |> List.map json_string |> String.concat "," in
+    Printf.fprintf manifest "    {\"name\":%s,\"code\":%s,\"file\":%s,\"tags\":[%s]}"
+      (json_string name) (json_string source.code) (json_string file) tags);
   output_string manifest "\n  ]\n}\n";
   close_out manifest

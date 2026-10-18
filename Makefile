@@ -31,34 +31,34 @@ data:
 
 all-data:
 	mkdir -p public/data
-	dune exec scripts/preprocess.exe -- --limit=5000 public/data --hunspell=/usr/share/hunspell \
+	dune exec scripts/preprocess.exe -- --gzip --limit=5000 public/data --hunspell=/usr/share/hunspell \
 		Faroese:/usr/share/dict/faroese Irish:/usr/share/dict/irish Manx:/usr/share/dict/manx
 
 full-data:
 	mkdir -p public/data-full
-	dune exec scripts/preprocess.exe -- --base-only --unique public/data-full --hunspell=/usr/share/hunspell \
+	dune exec scripts/preprocess.exe -- --gzip --base-only --unique public/data-full --hunspell=/usr/share/hunspell \
 		Faroese:/usr/share/dict/faroese Irish:/usr/share/dict/irish Manx:/usr/share/dict/manx
 
 unique-data:
 	mkdir -p public/data
-	dune exec scripts/preprocess.exe -- --limit=5000 --unique public/data --hunspell=/usr/share/hunspell \
+	dune exec scripts/preprocess.exe -- --gzip --limit=5000 --unique public/data --hunspell=/usr/share/hunspell \
 		Faroese:/usr/share/dict/faroese Irish:/usr/share/dict/irish Manx:/usr/share/dict/manx
 
 base-unique-data:
 	mkdir -p public/data
-	dune exec scripts/preprocess.exe -- --limit=5000 --base-only --unique public/data --hunspell=/usr/share/hunspell \
+	dune exec scripts/preprocess.exe -- --gzip --limit=5000 --base-only --unique public/data --hunspell=/usr/share/hunspell \
 		Faroese:/usr/share/dict/faroese Irish:/usr/share/dict/irish Manx:/usr/share/dict/manx
 
 real-data:
 	mkdir -p public/data
-	dune exec scripts/preprocess.exe -- public/data \
+	dune exec scripts/preprocess.exe -- --gzip public/data \
 		English:/usr/share/dict/american-english German:/usr/share/dict/ngerman \
 		French:/usr/share/dict/french Spanish:/usr/share/dict/spanish \
 		Italian:/usr/share/dict/italian Portuguese:/usr/share/dict/portuguese
 
 sample-data:
 	mkdir -p public/data
-	dune exec scripts/preprocess.exe -- public/data \
+	dune exec scripts/preprocess.exe -- --gzip public/data \
 		English:data/sample/english.txt German:data/sample/german.txt \
 		French:data/sample/french.txt Spanish:data/sample/spanish.txt Italian:data/sample/italian.txt Portuguese:data/sample/portuguese.txt
 

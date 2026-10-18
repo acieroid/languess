@@ -21,6 +21,10 @@ let set_hidden node hidden =
   if hidden then node##setAttribute (Js.string "hidden") (Js.string "hidden")
   else node##removeAttribute (Js.string "hidden")
 let status = element "status"
+let loading = element "loading"
+let loading_label = element "loading-label"
+let loading_count = element "loading-count"
+let loading_progress = element "loading-progress"
 let feedback = element "feedback"
 let answer_box = element "answers"
 let round = element "round"
@@ -63,6 +67,21 @@ let property object_ key = Js.Unsafe.get object_ key
 let json_parse text =
   Js.Unsafe.fun_call (Js.Unsafe.pure_js_expr "JSON.parse") [| Js.Unsafe.inject (Js.string text) |]
 
+let read_response_text response url =
+  if String.ends_with ~suffix:".gz" url then begin
+    let supported = Js.to_bool (Js.Unsafe.coerce
+      (Js.Unsafe.pure_js_expr "typeof DecompressionStream !== 'undefined'")) in
+    if not supported then raise (Failure "gzip decompression is not supported by this browser");
+    let decompressor = Js.Unsafe.new_obj (Js.Unsafe.pure_js_expr "DecompressionStream")
+      [| Js.Unsafe.inject (Js.string "gzip") |] in
+    let stream = Js.Unsafe.meth_call (property response "body") "pipeThrough"
+      [| Js.Unsafe.inject decompressor |] in
+    let decoded = Js.Unsafe.new_obj (Js.Unsafe.pure_js_expr "Response")
+      [| Js.Unsafe.inject stream |] in
+    Js.Unsafe.meth_call decoded "text" [||]
+  end else
+    Js.Unsafe.meth_call response "text" [||]
+
 let fetch_text url success failure =
   let fetch = Js.Unsafe.pure_js_expr "fetch" in
   let promise = Js.Unsafe.fun_call fetch [| Js.Unsafe.inject (Js.string url) |] in
@@ -70,7 +89,7 @@ let fetch_text url success failure =
     let ok = Js.to_bool (Js.Unsafe.coerce (property response "ok")) in
     if not ok then failure ("request failed for " ^ url)
     else
-      let text_promise = Js.Unsafe.meth_call response "text" [||] in
+      let text_promise = read_response_text response url in
       let after_text text = success (js_string text) in
       let chained = Js.Unsafe.meth_call text_promise "then" [| Js.Unsafe.inject (Js.wrap_callback after_text) |] in
       ignore (Js.Unsafe.meth_call chained "catch" [| Js.Unsafe.inject (Js.wrap_callback (fun _ -> failure ("could not read " ^ url))) |])
@@ -90,6 +109,16 @@ let parse_words text =
   Array.to_list items |> List.map js_string
 
 let update_score game = set_text score (Printf.sprintf "Score: %d / %d" game.correct_count game.question_count)
+
+let update_loading completed total =
+  set_text loading_count (Printf.sprintf "%d / %d dictionaries" completed total);
+  loading_progress##setAttribute (Js.string "max") (Js.string (string_of_int (max 1 total)));
+  loading_progress##setAttribute (Js.string "value") (Js.string (string_of_int completed))
+
+let defer callback =
+  ignore (Js.Unsafe.fun_call (Js.Unsafe.pure_js_expr "setTimeout")
+    [| Js.Unsafe.inject (Js.wrap_callback (fun _ -> callback ()));
+       Js.Unsafe.inject (Js.number_of_float 0.) |])
 
 (* Browser normalization makes e.g. "Francais" match "Français" when custom
    manifests use accented language names. *)
@@ -182,12 +211,14 @@ let start_game dictionaries =
   let index = Game.build_index ~minimum_length:min_length dictionaries in
   let available = Game.words index in
   if available = [] then begin
+    set_hidden loading true;
     status##.className := Js.string "status error";
     set_text status "No words meet that minimum length. Choose a smaller value."
   end else begin
     let languages = List.map fst dictionaries in
     let game = { languages; index; remaining = available; current = None; answered = false; correct_count = 0; question_count = 0 } in
     current_game := Some game;
+    set_hidden loading true;
     status##.className := Js.string "status";
     set_text status (Printf.sprintf "%d languages · %d words ready." (List.length languages) (List.length available));
     render_suggestions languages;
@@ -199,9 +230,18 @@ let start_game dictionaries =
 
 let load_game () =
   let data_root = if Js.to_bool full_dataset##.checked then "data-full" else "data" in
-  set_text status (if data_root = "data-full" then "Loading full dictionaries…" else "Loading dictionaries…");
+  let loading_name = if data_root = "data-full" then "Loading full dictionaries" else "Loading dictionaries" in
+  set_text status (loading_name ^ "…");
   status##.className := Js.string "status";
-  let fail message = status##.className := Js.string "status error"; set_text status ("Could not start game: " ^ message) in
+  set_text loading_label loading_name;
+  update_loading 0 0;
+  set_hidden loading false;
+  set_hidden round true;
+  let fail message =
+    set_hidden loading true;
+    status##.className := Js.string "status error";
+    set_text status ("Could not start game: " ^ message)
+  in
   fetch_text (data_root ^ "/manifest.json")
     (fun manifest_text ->
       try
@@ -210,22 +250,33 @@ let load_game () =
         let files = List.filter (fun info -> List.mem (continent_of_language info.name) selected) files in
         if files = [] then fail "the manifest has no languages"
         else begin
-          let pending = ref (List.length files) in
+          let total = List.length files in
+          let completed = ref 0 in
           let loaded = ref [] in
           let failed = ref false in
+          update_loading 0 total;
+          let loaded_dictionary info words =
+            if not !failed then begin
+              loaded := (info.name, words) :: !loaded;
+              incr completed;
+              update_loading !completed total;
+              if !completed = total then begin
+                set_text loading_label "Indexing words";
+                set_text status "Preparing the game…";
+                defer (fun () -> start_game (List.rev !loaded))
+              end
+            end
+          in
           List.iter (fun info ->
             let cache_key = data_root ^ "/" ^ info.file in
             match Hashtbl.find_opt dictionary_cache cache_key with
             | Some words ->
-                loaded := (info.name, words) :: !loaded; decr pending;
-                if !pending = 0 then start_game (List.rev !loaded)
+                loaded_dictionary info words
             | None -> fetch_text cache_key
                 (fun text -> try
                   let words = parse_words text in
                   Hashtbl.replace dictionary_cache cache_key words;
-                  loaded := (info.name, words) :: !loaded;
-                  decr pending;
-                  if !pending = 0 && not !failed then start_game (List.rev !loaded)
+                  loaded_dictionary info words
                 with _ -> if not !failed then (failed := true; fail ("invalid data in " ^ info.file)))
                 (fun message -> if not !failed then (failed := true; fail message))) files
         end

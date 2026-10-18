@@ -14,6 +14,7 @@ select, input { border: 1px solid #596780; padding: .45rem .6rem; background: #1
 button { cursor: pointer; border: 0; padding: .5rem .9rem; background: #6d8fff; color: #0c1020; font-weight: 750; }
 button:hover { background: #91abff; } button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #b5c8ff; outline-offset: 2px; }
 .status { min-height: 1.5rem; color: #aab5cc; }.status.error { color: #ff8990; }
+.loading { margin: .5rem 0 1rem; padding: .85rem 1rem; border: 1px solid #3c4b68; border-radius: .7rem; background: #171e2d; }.loading-copy { display: flex; justify-content: space-between; gap: 1rem; color: #c5d2ed; font-size: .9rem; font-weight: 650; }.loading-copy span:last-child { color: #aab5cc; font-variant-numeric: tabular-nums; } progress { width: 100%; height: .65rem; margin-top: .55rem; accent-color: #91abff; } progress::-webkit-progress-bar { background: #0f1521; border-radius: 1rem; } progress::-webkit-progress-value { background: #6d8fff; border-radius: 1rem; } progress::-moz-progress-bar { background: #6d8fff; border-radius: 1rem; }
 .round { border-top: 1px solid #303a51; padding-top: 1.25rem; }.score { text-align: right; color: #aab5cc; font-weight: 650; }
 .word { text-align: center; overflow-wrap: anywhere; font-size: clamp(2rem, 10vw, 4.25rem); font-weight: 800; letter-spacing: -.04em; margin: 1.25rem 0; }
 .answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .65rem; }.answers button { background: #2d416c; color: #e4ebff; }.answers button:hover { background: #3a568d; }

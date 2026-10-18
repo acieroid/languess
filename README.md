@@ -38,13 +38,13 @@ sudo apt-get install $(apt-cache search hunspell- | awk '$1 ~ /^hunspell-[a-z]/ 
 Replace it with plain Unix dictionary files (one word per line) using:
 
 ```sh
-dune exec scripts/preprocess.exe -- public/data \
+dune exec scripts/preprocess.exe -- --gzip public/data \
   English:/usr/share/dict/words German:/path/to/german-words \
   French:/path/to/french-words Spanish:/path/to/spanish-words \
   Italian:/path/to/italian-words
 ```
 
-On Linux these lists are commonly distributed as `wamerican`, `wspanish`, `wfrench`, or Hunspell packages. The preprocessor strips Hunspell affix flags, trims and deduplicates words per language, preserves UTF-8 accents, and emits a JSON file for each language plus `manifest.json`. `make data` chooses the complete installed set when present and otherwise uses the fallback; `make all-data`, `make real-data`, and `make sample-data` select a mode explicitly.
+On Linux these lists are commonly distributed as `wamerican`, `wspanish`, `wfrench`, or Hunspell packages. The preprocessor strips Hunspell affix flags, trims and deduplicates words per language, preserves UTF-8 accents, and emits a gzip-compressed JSON file for each language plus `manifest.json`. The browser uses its built-in `DecompressionStream` to read these files, so deployment does not depend on host-side HTTP compression. `make data` chooses the complete installed set when present and otherwise uses the fallback; `make all-data`, `make real-data`, and `make sample-data` select a mode explicitly.
 
 ### Unique-word variant
 
@@ -54,7 +54,7 @@ Run `make unique-build` to create a discriminative variant: a word is retained o
 
 ### Full dataset
 
-The unchecked **Full dataset** control switches the game to `public/data-full/`: the same base-first unique corpus without the 5,000-word-per-language cap. Generate a deployable site with both datasets using `make full-site`. The current full corpus contains about 7.9 million playable words (minimum length 5) and 146 MB of JSON before HTTP compression, so it is intended for fast connections and has a noticeably longer loading/indexing phase.
+The unchecked **Full dataset** control switches the game to `public/data-full/`: the same base-first unique corpus without the 5,000-word-per-language cap. Generate a deployable site with both datasets using `make full-site`. The current full corpus contains about 7.9 million playable words (minimum length 5), stored as roughly 26.5 MB of gzip-compressed JSON (about 146 MB after decompression), so it is intended for fast connections and has a noticeably longer loading/indexing phase.
 
 ## Architecture
 

@@ -157,18 +157,20 @@ let parse_source argument =
 
 let () =
   if Array.length Sys.argv < 3 then (
-    prerr_endline "Usage: preprocess [--limit=N] [--base-only] [--unique] OUTPUT_DIR [--hunspell=DIR] Language:path ...";
+    prerr_endline "Usage: preprocess [--limit=N] [--base-only] [--unique] [--gzip] OUTPUT_DIR [--hunspell=DIR] Language:path ...";
     exit 2);
   let argument = ref 1 in
   let limit = ref None in
   let unique = ref false in
   let base_only = ref false in
+  let compressed = ref false in
   while !argument < Array.length Sys.argv && String.starts_with ~prefix:"--" Sys.argv.(!argument) do
     let option = Sys.argv.(!argument) in
     if String.starts_with ~prefix:"--limit=" option then
       limit := Some (int_of_string (String.sub option 8 (String.length option - 8)))
     else if option = "--unique" then unique := true
     else if option = "--base-only" then base_only := true
+    else if option = "--gzip" then compressed := true
     else failwith ("Unknown option " ^ option);
     incr argument
   done;
@@ -209,7 +211,12 @@ let () =
       let out = open_out (Filename.concat output file) in
       output_string out ("{\"words\":[" ^ String.concat "," (List.map json_string words) ^ "]}\n");
       close_out out;
-      entries := (language, file) :: !entries)
+      if !compressed then begin
+        let path = Filename.concat output file in
+        if Sys.command ("gzip -9 -f " ^ shell_quote path) <> 0 then
+          failwith ("Could not compress " ^ path)
+      end;
+      entries := (language, if !compressed then file ^ ".gz" else file) :: !entries)
     dictionaries;
   let manifest = open_out (Filename.concat output "manifest.json") in
   let item (name, file) =

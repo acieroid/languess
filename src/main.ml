@@ -32,6 +32,28 @@ let difficulty : Dom_html.selectElement Js.t = Js.Unsafe.coerce (element "diffic
 let minimum : Dom_html.inputElement Js.t = Js.Unsafe.coerce (element "minimum-length")
 let guess : Dom_html.inputElement Js.t = Js.Unsafe.coerce (element "guess-input")
 
+let continents = [ "africa", "Africa"; "asia", "Asia"; "europe", "Europe"; "south-america", "South America" ]
+
+let continent_of_language name =
+  let base =
+    match String.index_opt name '(' with
+    | Some index -> String.trim (String.sub name 0 index)
+    | None -> name
+  in
+  if List.mem base [ "Afrikaans"; "Swahili" ] then "Africa"
+  else if List.mem base
+    [ "Arabic"; "Bengali"; "Central Kurdish"; "Dzongkha"; "Gujarati"; "Hebrew";
+      "Hindi"; "Indonesian"; "Kazakh"; "Korean"; "Kurdish"; "Kurmanji"; "Lao";
+      "Malayalam"; "Mongolian"; "Nepali"; "Sinhala"; "Telugu"; "Thai"; "Tibetan";
+      "Turkish"; "Uzbek"; "Vietnamese" ] then "Asia"
+  else if base = "Guarani" then "South America"
+  else "Europe"
+
+let selected_continents () =
+  List.filter_map (fun (id, name) ->
+    let checkbox : Dom_html.inputElement Js.t = Js.Unsafe.coerce (element ("continent-" ^ id)) in
+    if Js.to_bool checkbox##.checked then Some name else None) continents
+
 let current_game : game option ref = ref None
 let dictionary_cache : (string, string list) Hashtbl.t = Hashtbl.create 11
 
@@ -182,6 +204,8 @@ let load_game () =
     (fun manifest_text ->
       try
         let files = parse_manifest manifest_text in
+        let selected = selected_continents () in
+        let files = List.filter (fun info -> List.mem (continent_of_language info.name) selected) files in
         if files = [] then fail "the manifest has no languages"
         else begin
           let pending = ref (List.length files) in

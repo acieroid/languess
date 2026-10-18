@@ -5,6 +5,7 @@ body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding
 h1 { margin: 0; font-size: clamp(2rem, 8vw, 3rem); letter-spacing: -.04em; }
 .subtitle { color: #aab5cc; margin: .35rem 0 1.5rem; }
 .controls { display: flex; gap: .75rem; flex-wrap: wrap; align-items: end; padding: 1rem; background: #252d40; border-radius: .75rem; }
+.continent-filters { margin: 0; border: 1px solid #596780; border-radius: .5rem; padding: .45rem .65rem .55rem; }.continent-filters legend { padding: 0 .25rem; font-size: .85rem; font-weight: 650; }.continent-filters div { display: flex; flex-wrap: wrap; gap: .35rem .75rem; }.continent-filters label { display: block; font-size: .8rem; font-weight: 500; }.continent-filters input { width: 1rem; height: 1rem; min-height: auto; margin: 0 .2rem 0 0; padding: 0; vertical-align: -2px; accent-color: #91abff; }
 label { display: grid; gap: .3rem; font-size: .85rem; font-weight: 650; }
 select, input, button { font: inherit; border-radius: .5rem; min-height: 2.6rem; }
 select, input { border: 1px solid #596780; padding: .45rem .6rem; background: #111724; color: inherit; }

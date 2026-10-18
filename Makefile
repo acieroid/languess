@@ -1,4 +1,4 @@
-.PHONY: build full-site sentence-build sentence-data sentence-1k-data unique-build base-unique-build data all-data full-data unique-data base-unique-data real-data sample-data test serve clean
+.PHONY: build full-site sentence-build sentence-data sentence-1k-data tag-word-data unique-build base-unique-build data all-data full-data unique-data base-unique-data real-data sample-data test serve clean
 
 build: data
 	dune build src/main.bc.js
@@ -21,6 +21,13 @@ sentence-build: build sentence-data
 sentence-1k-data:
 	mkdir -p public/sentences-1k
 	dune exec scripts/preprocess_sentences.exe -- --output public/sentences-1k --limit=1000 --codes data/tatoeba-1k-codes.txt
+
+# Refresh only word-manifest metadata; existing compressed dictionaries are untouched.
+tag-word-data:
+	dune exec scripts/preprocess.exe -- --gzip --limit=5000 --base-only --unique --manifest-only public/data --hunspell=/usr/share/hunspell \
+		Faroese:/usr/share/dict/faroese Irish:/usr/share/dict/irish Manx:/usr/share/dict/manx
+	dune exec scripts/preprocess.exe -- --gzip --base-only --unique --manifest-only public/data-full --hunspell=/usr/share/hunspell \
+		Faroese:/usr/share/dict/faroese Irish:/usr/share/dict/irish Manx:/usr/share/dict/manx
 
 unique-build: unique-data
 	dune build src/main.bc.js

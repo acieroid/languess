@@ -79,6 +79,8 @@ The unchecked **Full dataset** control switches the game to `public/data-full/`:
 - `src/game.ml` provides pure UTF-8 length filtering, word-to-language indexing, answer checks, and shuffled choices; `src/game_test.ml` tests these rules.
 - `src/main.ml` fetches the manifest and JSON dictionaries asynchronously, caches them in memory, manages game state, and renders the DOM.
 - `public/sentence.html` reuses that browser application with a sentence-data manifest; Tatoeba data is fetched only from the static host, never from Tatoeba at play time.
+
+Both word and sentence manifests include `region`, `family`, `script`, and `status` tags for each language. Run `make tag-word-data` to refresh word-manifest metadata without rewriting the compressed dictionaries.
 - Dictionaries are never bundled into the generated JavaScript. Every selected word is removed from the current pool, and every language containing it is accepted.
 
 Easy and medium generate 3 and 6 distinct shuffled choices (or fewer if a custom manifest has too few languages). Hard mode uses a keyboard-accessible native `datalist` autocomplete. The prototype loads all manifest languages at game start asynchronously: simple and responsive for the initial set, while leaving the data format open to future lazy loading.

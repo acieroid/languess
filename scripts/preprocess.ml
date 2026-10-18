@@ -93,6 +93,54 @@ let language_names =
     "te", "Telugu"; "th", "Thai"; "tr", "Turkish"; "uk", "Ukrainian";
     "uz", "Uzbek"; "vi", "Vietnamese" ]
 
+let word_code name =
+  match List.find_opt (fun (_, label) -> label = name) language_names with
+  | Some (code, _) -> code
+  | None ->
+      match name with "Faroese" -> "fo" | "Irish" -> "ga" | "Manx" -> "gv" | _ -> "und"
+
+let word_region code =
+  if List.mem code [ "af"; "sw" ] then "africa"
+  else if List.mem code [ "ar"; "bn"; "bo"; "ckb"; "gu"; "he"; "hi"; "id"; "kk"; "ko";
+    "kmr"; "lo"; "ml"; "mn"; "ne"; "si"; "te"; "th"; "tr"; "uz"; "vi" ] then "asia"
+  else if code = "gug" then "south-america" else "europe"
+
+let word_family code =
+  if code = "eo" then "constructed"
+  else if List.mem code [ "ar"; "he" ] then "afro-asiatic"
+  else if List.mem code [ "kk"; "tr"; "uz" ] then "turkic"
+  else if code = "hu" then "uralic"
+  else if code = "ko" then "koreanic"
+  else if code = "eu" then "language-isolate"
+  else if code = "bo" then "sino-tibetan"
+  else if List.mem code [ "id" ] then "austronesian"
+  else if List.mem code [ "ml"; "te" ] then "dravidian"
+  else if code = "sw" then "niger-congo"
+  else if List.mem code [ "mn" ] then "mongolic"
+  else "indo-european"
+
+let word_script code =
+  if code = "ar" then "arabic"
+  else if List.mem code [ "be"; "bg"; "ru"; "sr"; "uk" ] then "cyrillic"
+  else if code = "el" then "greek"
+  else if code = "he" then "hebrew"
+  else if code = "bn" then "bengali-assamese"
+  else if List.mem code [ "gu"; "hi"; "ne" ] then "devanagari"
+  else if code = "ko" then "hangul"
+  else if code = "lo" then "lao"
+  else if code = "ml" then "malayalam"
+  else if code = "si" then "sinhala"
+  else if code = "te" then "telugu"
+  else if code = "th" then "thai"
+  else if code = "bo" then "tibetan"
+  else "latin"
+
+let word_tags name =
+  let code = word_code name in
+  code, [ "region:" ^ word_region code; "family:" ^ word_family code;
+          "script:" ^ word_script code;
+          "status:" ^ (if code = "eo" then "constructed" else "modern") ]
+
 let hunspell_code filename =
   Filename.remove_extension filename |> String.split_on_char '_' |> List.hd
 
@@ -164,6 +212,7 @@ let () =
   let unique = ref false in
   let base_only = ref false in
   let compressed = ref false in
+  let manifest_only = ref false in
   while !argument < Array.length Sys.argv && String.starts_with ~prefix:"--" Sys.argv.(!argument) do
     let option = Sys.argv.(!argument) in
     if String.starts_with ~prefix:"--limit=" option then
@@ -171,6 +220,7 @@ let () =
     else if option = "--unique" then unique := true
     else if option = "--base-only" then base_only := true
     else if option = "--gzip" then compressed := true
+    else if option = "--manifest-only" then manifest_only := true
     else failwith ("Unknown option " ^ option);
     incr argument
   done;
@@ -208,19 +258,24 @@ let () =
   List.iter
     (fun (language, words) ->
       let file = slugify language ^ ".json" in
-      let out = open_out (Filename.concat output file) in
-      output_string out ("{\"words\":[" ^ String.concat "," (List.map json_string words) ^ "]}\n");
-      close_out out;
-      if !compressed then begin
-        let path = Filename.concat output file in
-        if Sys.command ("gzip -9 -f " ^ shell_quote path) <> 0 then
-          failwith ("Could not compress " ^ path)
+      if not !manifest_only then begin
+        let out = open_out (Filename.concat output file) in
+        output_string out ("{\"words\":[" ^ String.concat "," (List.map json_string words) ^ "]}\n");
+        close_out out;
+        if !compressed then begin
+          let path = Filename.concat output file in
+          if Sys.command ("gzip -9 -f " ^ shell_quote path) <> 0 then
+            failwith ("Could not compress " ^ path)
+        end
       end;
       entries := (language, if !compressed then file ^ ".gz" else file) :: !entries)
     dictionaries;
   let manifest = open_out (Filename.concat output "manifest.json") in
   let item (name, file) =
-    "{\"name\":" ^ json_string name ^ ",\"file\":" ^ json_string file ^ "}"
+    let code, tags = word_tags name in
+    "{\"name\":" ^ json_string name ^ ",\"code\":" ^ json_string code ^
+    ",\"file\":" ^ json_string file ^ ",\"tags\":[" ^
+    String.concat "," (List.map json_string tags) ^ "]}"
   in
   output_string manifest ("{\"languages\":[" ^ String.concat "," (List.map item (List.rev !entries)) ^ "]}\n");
   close_out manifest

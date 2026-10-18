@@ -1,6 +1,6 @@
 open Js_of_ocaml
 
-type language_file = { name : string; file : string }
+type language_file = { name : string; file : string; tags : string list }
 type game = {
   languages : string list;
   index : Game.index;
@@ -43,58 +43,11 @@ let minimum : Dom_html.inputElement Js.t = Js.Unsafe.coerce (element "minimum-le
 let guess : Dom_html.inputElement Js.t = Js.Unsafe.coerce (element "guess-input")
 let full_dataset : Dom_html.inputElement Js.t = Js.Unsafe.coerce (element "full-dataset")
 
-let continents =
-  let common = [ "africa", "Africa"; "asia", "Asia"; "europe", "Europe"; "south-america", "South America" ] in
-  if sentence_mode then common @ [ "other", "Other regions" ] else common
-
-let continent_of_language name =
-  let base =
-    match String.index_opt name '(' with
-    | Some index -> String.trim (String.sub name 0 index)
-    | None -> name
-  in
-  if List.mem base
-    [ "Afrikaans"; "Swahili"; "Congo Swahili"; "Kabyle"; "Berber"; "Tigre";
-      "Tachelhit"; "Hausa"; "Standard Moroccan Tamazight"; "Nande"; "Rundi";
-      "Tarifit"; "Lingala"; "Tigrinya"; "Central Kanuri"; "Nuer";
-      "Algerian Arabic"; "Egyptian Arabic" ] then "Africa"
-  else if List.mem base
-    [ "Arabic"; "Bengali"; "Central Kurdish"; "Dzongkha"; "Gujarati"; "Hebrew";
-      "Hindi"; "Indonesian"; "Kazakh"; "Korean"; "Kurdish"; "Kurmanji"; "Lao";
-      "Malayalam"; "Mongolian"; "Nepali"; "Sinhala"; "Telugu"; "Thai"; "Tibetan";
-      "Turkish"; "Uzbek"; "Vietnamese"; "Japanese"; "Mandarin Chinese"; "Marathi";
-      "Tagalog"; "Armenian"; "Iranian Persian"; "Yue Chinese"; "Assamese";
-      "Azerbaijani"; "Northern Kurdish"; "Uighur"; "Standard Malay"; "Turkmen";
-      "Santali"; "Coastal Kadazan"; "Wu Chinese"; "Nepali (individual language)";
-      "Kadazan Dusun"; "Rohingya"; "Urdu"; "Ottoman Turkish (1500-1928)";
-      "Iloko"; "Khmer"; "Ho"; "Khasi"; "Waray (Philippines)";
-      "Malay (individual language)"; "Literary Chinese"; "Cebuano"; "Javanese";
-      "Southern Altai"; "Buriat"; "Yakut" ] then "Asia"
-  else if List.mem base [ "Guarani"; "Guadeloupean Creole French" ] then "South America"
-  else if sentence_mode && List.mem base
-    [ "English"; "Russian"; "Italian"; "Esperanto"; "German"; "French"; "Portuguese";
-      "Spanish"; "Hungarian"; "Dutch"; "Ukrainian"; "Lithuanian"; "Finnish"; "Polish";
-      "Czech"; "Macedonian"; "Danish"; "Swedish"; "Latin"; "Serbian";
-      "Modern Greek (1453-)"; "Interlingua (International Auxiliary Language Association)";
-      "Romanian"; "Lingua Franca Nova"; "Slovak"; "Yiddish"; "Bulgarian";
-      "Occitan (post 1500)"; "Standard Latvian"; "Norwegian Bokmål"; "Low German";
-      "Ido"; "Belarusian"; "Interlingue"; "Icelandic"; "Gronings";
-      "Norwegian Nynorsk"; "Catalan"; "Galician"; "Breton"; "Croatian"; "Basque";
-      "Estonian"; "Prussian"; "Udmurt"; "Eastern Mari"; "Cornish"; "Slovenian";
-      "Northern Frisian"; "Irish"; "Albanian"; "Hunsrik"; "Ladino"; "Swabian";
-      "Ligurian"; "Welsh"; "Ancient Greek (to 1453)"; "Bosnian"; "Chuvash";
-      "Interslavic"; "Lower Sorbian"; "Upper Sorbian"; "Picard"; "Old Russian";
-      "Brithenig"; "Scottish Gaelic"; "Romany"; "Luxembourgish" ] then "Europe"
-  else if sentence_mode then "Other regions"
-  else "Europe"
-
-let selected_continents () =
-  List.filter_map (fun (id, name) ->
-    let checkbox : Dom_html.inputElement Js.t = Js.Unsafe.coerce (element ("continent-" ^ id)) in
-    if Js.to_bool checkbox##.checked then Some name else None) continents
-
 let current_game : game option ref = ref None
 let dictionary_cache : (string, string list) Hashtbl.t = Hashtbl.create 11
+let filter_files : language_file list ref = ref []
+let filter_inputs : (string * Dom_html.inputElement Js.t) list ref = ref []
+let filters_ready = ref false
 
 let js_string value = Js.to_string (Js.Unsafe.coerce value)
 let property object_ key = Js.Unsafe.get object_ key
@@ -135,13 +88,83 @@ let parse_manifest text =
   let root = json_parse text in
   let entries = Js.to_array (Js.Unsafe.coerce (property root "languages")) in
   Array.to_list entries
-  |> List.map (fun entry -> { name = js_string (property entry "name"); file = js_string (property entry "file") })
+  |> List.map (fun entry ->
+    let tags = try Js.to_array (Js.Unsafe.coerce (property entry "tags")) |> Array.to_list |> List.map js_string with _ -> [] in
+    { name = js_string (property entry "name"); file = js_string (property entry "file"); tags })
 
 let parse_items text =
   let root = json_parse text in
   let field = if sentence_mode then "sentences" else "words" in
   let items = Js.to_array (Js.Unsafe.coerce (property root field)) in
   Array.to_list items |> List.map js_string
+
+let filter_facets =
+  [ "region", "Region"; "family", "Language family";
+    "script", "Writing system"; "status", "Type" ]
+
+let tag_label = function
+  | "region:africa" -> "Africa" | "region:asia" -> "Asia"
+  | "region:europe" -> "Europe" | "region:south-america" -> "Americas"
+  | "family:indo-european" -> "Indo-European" | "family:afro-asiatic" -> "Afro-Asiatic"
+  | "family:sino-tibetan" -> "Sino-Tibetan" | "family:niger-congo" -> "Niger-Congo"
+  | "family:austronesian" -> "Austronesian" | "family:austroasiatic" -> "Austroasiatic"
+  | "family:language-isolate" -> "Language isolate"
+  | "script:han" -> "Han" | "script:hangul" -> "Hangul"
+  | "script:bengali-assamese" -> "Bengali-Assamese"
+  | "status:modern" -> "Modern" | "status:historical" -> "Historical"
+  | "status:constructed" -> "Constructed"
+  | tag ->
+      match String.split_on_char ':' tag with
+      | _ :: value :: _ -> String.capitalize_ascii (String.map (fun c -> if c = '-' then ' ' else c) value)
+      | _ -> tag
+
+let selected_tags facet =
+  !filter_inputs
+  |> List.filter_map (fun (tag, input) ->
+    if String.starts_with ~prefix:(facet ^ ":") tag && Js.to_bool input##.checked then Some tag else None)
+
+let matches_filters info =
+  List.for_all (fun (facet, _) ->
+    match selected_tags facet with
+    | [] -> true
+    | selected -> List.exists (fun tag -> List.mem tag selected) info.tags) filter_facets
+
+let update_filter_count () =
+  let count = List.filter matches_filters !filter_files |> List.length in
+  set_text (element "filter-count") (Printf.sprintf "%d languages selected" count)
+
+let render_filters files =
+  filter_files := files;
+  if !filters_ready then update_filter_count ()
+  else begin
+    let box = element "filter-groups" in
+    set_html box "";
+    let available_tags = List.concat_map (fun info -> info.tags) files |> List.sort_uniq String.compare in
+    List.iter (fun (facet, title) ->
+      let details = document##createElement (Js.string "details") in
+      details##.className := Js.string "filter-group";
+      if facet = "region" then details##setAttribute (Js.string "open") (Js.string "open");
+      let summary = document##createElement (Js.string "summary") in
+      set_text summary title;
+      Dom.appendChild details summary;
+      let options = document##createElement (Js.string "div") in
+      options##.className := Js.string "filter-options";
+      available_tags |> List.filter (String.starts_with ~prefix:(facet ^ ":")) |> List.iter (fun tag ->
+        let label = document##createElement (Js.string "label") in
+        let input : Dom_html.inputElement Js.t = Js.Unsafe.coerce (document##createElement (Js.string "input")) in
+        input##setAttribute (Js.string "type") (Js.string "checkbox");
+        input##.checked := Js._true;
+        Dom_html.addEventListener input Dom_html.Event.change
+          (Dom_html.handler (fun _ -> update_filter_count (); Js._true)) Js._false |> ignore;
+        Dom.appendChild label input;
+        Dom.appendChild label (document##createTextNode (Js.string (tag_label tag)));
+        Dom.appendChild options label;
+        filter_inputs := (tag, input) :: !filter_inputs);
+      Dom.appendChild details options;
+      Dom.appendChild box details) filter_facets;
+    filters_ready := true;
+    update_filter_count ()
+  end
 
 let update_score game = set_text score (Printf.sprintf "Score: %d / %d" game.correct_count game.question_count)
 
@@ -293,9 +316,8 @@ let load_game () =
     (fun manifest_text ->
       try
         let files = parse_manifest manifest_text in
-        let selected = selected_continents () in
-        let filtered = List.filter (fun info -> List.mem (continent_of_language info.name) selected) files in
-        let files = filtered in
+        render_filters files;
+        let files = List.filter matches_filters files in
         if files = [] then fail "the manifest has no languages"
         else begin
           let total = List.length files in
@@ -334,6 +356,11 @@ let () =
   Random.self_init ();
   Dom_html.addEventListener (element "start") Dom_html.Event.click
     (Dom_html.handler (fun _ -> load_game (); Js._false)) Js._false |> ignore;
+  Dom_html.addEventListener (element "filter-reset") Dom_html.Event.click
+    (Dom_html.handler (fun _ ->
+      List.iter (fun (_, input) -> input##.checked := Js._true) !filter_inputs;
+      update_filter_count ();
+      Js._false)) Js._false |> ignore;
   Dom_html.addEventListener (element "next") Dom_html.Event.click
     (Dom_html.handler (fun _ -> (match !current_game with Some game -> show_item game | None -> ()); Js._false)) Js._false |> ignore;
   Dom_html.addEventListener (element "submit-guess") Dom_html.Event.click

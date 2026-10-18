@@ -24,15 +24,11 @@
         <label>Minimum word length
           <input id="minimum-length" type="number" min="1" value="5" inputmode="numeric">
         </label>
-        <fieldset class="continent-filters">
-          <legend>Language regions</legend>
-          <div>
-            <label><input id="continent-africa" type="checkbox" checked> Africa</label>
-            <label><input id="continent-asia" type="checkbox" checked> Asia</label>
-            <label><input id="continent-europe" type="checkbox" checked> Europe</label>
-            <label><input id="continent-south-america" type="checkbox" checked> South America</label>
-          </div>
-        </fieldset>
+        <section class="language-filters" aria-label="Choose languages">
+          <div class="filter-heading"><span>Choose languages</span><span id="filter-count">Loading language choices…</span></div>
+          <div id="filter-groups" class="filter-groups"></div>
+          <button id="filter-reset" class="filter-reset" type="button">All languages</button>
+        </section>
         <label class="full-dataset-option"><input id="full-dataset" type="checkbox"> Full dataset <span>(slower loading)</span></label>
         <button id="start" type="button">Start game</button>
       </section>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Language Guess</title>
+    <link rel="stylesheet" href="assets/style.css">
+  </head>
+  <body>
+    <main class="game-shell">
+      <header>
+        <h1>Language Guess</h1>
+        <p class="subtitle">Which language does this word belong to?</p>
+      </header>
+      <section class="controls" aria-label="Game settings">
+        <label>Difficulty
+          <select id="difficulty">
+            <option value="easy">Easy · 3 choices</option>
+            <option value="medium">Medium · 6 choices</option>
+            <option value="hard">Hard · type the language</option>
+          </select>
+        </label>
+        <label>Minimum word length
+          <input id="minimum-length" type="number" min="1" value="5" inputmode="numeric">
+        </label>
+        <button id="start" type="button">Start game</button>
+      </section>
+      <p id="status" class="status" role="status">Choose settings and start a game.</p>
+      <section id="round" class="round" hidden>
+        <div class="score" id="score">Score: 0 / 0</div>
+        <p id="word" class="word" aria-live="polite"></p>
+        <div id="answers" class="answers"></div>
+        <div id="hard-answer" class="hard-answer" hidden>
+          <label for="guess-input">Language</label>
+          <input id="guess-input" list="language-suggestions" autocomplete="off" placeholder="Start typing a language">
+          <datalist id="language-suggestions"></datalist>
+          <button id="submit-guess" type="button">Submit guess</button>
+        </div>
+        <p id="feedback" class="feedback" role="status"></p>
+        <button id="next" class="next" type="button" hidden>Next word</button>
+      </section>
+    </main>
+    <script src="assets/app.js"></script>
+  </body>
+</html>

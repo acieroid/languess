@@ -1,0 +1,15 @@
+(library
+ (name game)
+ (modules game))
+
+(executable
+ (name main)
+ (modules main)
+ (modes js)
+ (preprocess (pps js_of_ocaml-ppx))
+ (libraries game js_of_ocaml))
+
+(test
+ (name game_test)
+ (modules game_test)
+ (libraries game))

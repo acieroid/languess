@@ -1,0 +1,11 @@
+shared
+language
+garden
+window
+mountain
+picture
+freedom
+morning
+computer
+butterfly
+harbour

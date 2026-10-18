@@ -1,0 +1,11 @@
+shared
+idioma
+jardin
+ventana
+montana
+imagen
+libertad
+manana
+computadora
+mariposa
+puerto

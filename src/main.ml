@@ -269,7 +269,11 @@ let load_game () =
       try
         let files = parse_manifest manifest_text in
         let selected = selected_continents () in
-        let files = List.filter (fun info -> List.mem (continent_of_language info.name) selected) files in
+        let filtered = List.filter (fun info -> List.mem (continent_of_language info.name) selected) files in
+        (* A custom sentence manifest can contain language names whose region is
+           not yet classified.  Do not make the game unusable merely because a
+           filter has no matching metadata. *)
+        let files = if sentence_mode && filtered = [] && files <> [] then files else filtered in
         if files = [] then fail "the manifest has no languages"
         else begin
           let total = List.length files in

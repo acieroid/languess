@@ -296,7 +296,7 @@ let start_game dictionaries =
   end
 
 let preload_filters () =
-  let data_root = if sentence_mode then "sentences-1k" else "data" in
+  let data_root = if sentence_mode then "sentences-all" else "data" in
   fetch_text (data_root ^ "/manifest.json")
     (fun manifest_text ->
       try render_filters (parse_manifest manifest_text)
@@ -304,7 +304,7 @@ let preload_filters () =
     (fun _ -> set_text (element "filter-count") "Language choices unavailable")
 
 let load_game () =
-  let data_root = if sentence_mode then "sentences-1k" else if Js.to_bool full_dataset##.checked then "data-full" else "data" in
+  let data_root = if sentence_mode then "sentences-all" else if Js.to_bool full_dataset##.checked then "data-full" else "data" in
   let loading_name =
     if sentence_mode then "Loading sentence collections"
     else if data_root = "data-full" then "Loading full dictionaries" else "Loading dictionaries"

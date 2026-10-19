@@ -1,4 +1,4 @@
-.PHONY: build full-site sentence-build sentence-data sentence-1k-data tag-word-data unique-build base-unique-build data all-data full-data unique-data base-unique-data real-data sample-data test serve clean
+.PHONY: build full-site sentence-build sentence-data sentence-1k-data sentence-all-data tag-word-data unique-build base-unique-build data all-data full-data unique-data base-unique-data real-data sample-data test serve clean
 
 build: data
 	dune build src/main.bc.js
@@ -21,6 +21,10 @@ sentence-build: build sentence-data
 sentence-1k-data:
 	mkdir -p public/sentences-1k
 	dune exec scripts/preprocess_sentences.exe -- --output public/sentences-1k --limit=1000 --codes data/tatoeba-1k-codes.txt
+
+sentence-all-data:
+	mkdir -p public/sentences-all
+	dune exec scripts/preprocess_sentences.exe -- --output public/sentences-all --limit=1000 --codes data/tatoeba-all-codes.txt
 
 # Refresh only word-manifest metadata; existing compressed dictionaries are untouched.
 tag-word-data:

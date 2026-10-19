@@ -27,7 +27,7 @@ Open <http://localhost:8000>. `make serve` is the shortcut, and `make test` runs
 
 ## Sentence Guess
 
-Open `/sentence.html` (or use the link from Word Guess) to play the sentence variant. It uses the same Easy, Medium, and Hard answer modes, continent filters, scorekeeping, gzip loading, and progress display. The repository ships a deterministic random sample of up to 1,000 filtered sentences per language from Tatoeba, rather than its very large complete corpus. Sentence Guess uses the 150 languages that currently have at least 1,000 source sentences; the smaller 61-language sample remains in `public/sentences/` for development.
+Open `/sentence.html` (or use the link from Word Guess) to play the sentence variant. It uses the same Easy, Medium, and Hard answer modes, tag filters, scorekeeping, gzip loading, and progress display. The repository ships a deterministic random sample of up to 1,000 filtered sentences per language from Tatoeba, rather than its very large complete corpus. Sentence Guess uses every Tatoeba language code with source sentences; languages with smaller corpora simply contribute fewer entries.
 
 The source files are Tatoeba's weekly per-language TSV exports. Each row contains a sentence id, ISO 639-3 code, and text. `scripts/preprocess_sentences.ml` downloads those exports, removes very short/long and duplicate entries, reservoir-samples the remaining sentences with a fixed seed, and writes `public/sentences/*.json.gz` with a manifest. Rebuild it with:
 
@@ -35,10 +35,10 @@ The source files are Tatoeba's weekly per-language TSV exports. Each row contain
 make sentence-data
 ```
 
-To regenerate the expanded dataset used by Sentence Guess, run:
+To regenerate the all-language dataset used by Sentence Guess, run:
 
 ```sh
-make sentence-1k-data
+make sentence-all-data
 ```
 
 This needs `curl` and `bzip2`, in addition to the OCaml prerequisites. The Tatoeba sentence data used here is **CC BY 2.0 FR**; the sentence page and this README attribute Tatoeba. Sentences are community-contributed and may contain unexpected content. See [Tatoeba's download and licensing information](https://tatoeba.org/en/downloads).

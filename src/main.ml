@@ -295,6 +295,14 @@ let start_game dictionaries =
     show_item game
   end
 
+let preload_filters () =
+  let data_root = if sentence_mode then "sentences-1k" else "data" in
+  fetch_text (data_root ^ "/manifest.json")
+    (fun manifest_text ->
+      try render_filters (parse_manifest manifest_text)
+      with _ -> set_text (element "filter-count") "Language choices unavailable")
+    (fun _ -> set_text (element "filter-count") "Language choices unavailable")
+
 let load_game () =
   let data_root = if sentence_mode then "sentences-1k" else if Js.to_bool full_dataset##.checked then "data-full" else "data" in
   let loading_name =
@@ -354,6 +362,7 @@ let load_game () =
 
 let () =
   Random.self_init ();
+  preload_filters ();
   Dom_html.addEventListener (element "start") Dom_html.Event.click
     (Dom_html.handler (fun _ -> load_game (); Js._false)) Js._false |> ignore;
   Dom_html.addEventListener (element "filter-reset") Dom_html.Event.click
